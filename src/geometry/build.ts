@@ -7,7 +7,7 @@ import { dome } from './families/dome';
 import { footwear, gauntlet } from './families/extremities';
 import { chain, crest, horn, medallion, plate } from './families/ornaments';
 import { shell, type ShellCfg } from './families/shell';
-import type { BuildResult, CoverRange, Family, ParamDef } from './types';
+import type { BuildResult, CoverRange, Family, ParamDef, SqueezeRange } from './types';
 
 export const FAMILIES: Record<string, Family> = { shell, dome, cap, horn, crest, plate, medallion, chain, gauntlet, footwear };
 
@@ -68,16 +68,22 @@ export function buildStats() {
   return { builds, cached: cache.size };
 }
 
-export function buildKey(templateId: string, params: Record<string, number>, fitOffset: number, mirror: boolean): string {
+export function bulkOf(t: TemplateDef, params: Record<string, number>): number {
+  const f = familyOf(t);
+  return f.bulk ? f.bulk(params, t.cfg) : 0;
+}
+
+export function buildKey(templateId: string, params: Record<string, number>, fitOffset: number, mirror: boolean, squeeze?: SqueezeRange[]): string {
   let s = `${templateId}|${mirror ? 1 : 0}|${fitOffset.toFixed(4)}`;
+  if (squeeze) for (const q of squeeze) s += `|q${q.part}:${q.y0.toFixed(3)}:${q.y1.toFixed(3)}`;
   for (const k of Object.keys(params).sort()) s += `|${k}:${+params[k].toFixed(5)}`;
   return s;
 }
 
-export function buildComponent(templateId: string, params: Record<string, number>, fitOffset = 0, mirror = false): BuildResult {
+export function buildComponent(templateId: string, params: Record<string, number>, fitOffset = 0, mirror = false, squeeze?: SqueezeRange[]): BuildResult {
   const t = TEMPLATE_BY_ID[templateId];
   if (!t) throw new Error(`Unknown template "${templateId}"`);
-  const key = buildKey(templateId, params, fitOffset, mirror);
+  const key = buildKey(templateId, params, fitOffset, mirror, squeeze);
   const hit = cache.get(key);
   if (hit) {
     cache.delete(key);
@@ -85,7 +91,7 @@ export function buildComponent(templateId: string, params: Record<string, number
     return hit;
   }
   const full = { ...defaultParams(t), ...params };
-  const res = familyOf(t).build(full, { fitOffset, mirror }, t.cfg);
+  const res = familyOf(t).build(full, { fitOffset, mirror, squeeze }, t.cfg);
   builds++;
   cache.set(key, res);
   if (cache.size > MAX_CACHE) {

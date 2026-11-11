@@ -181,10 +181,12 @@ button { cursor: pointer; }
 .viewport-fallback { display: flex; align-items: center; justify-content: center; text-align: center; color: #2b2b2b; padding: 40px; }
 .viewport-fallback div { max-width: 420px; }
 .handle-tip { position: absolute; left: 50%; bottom: 52px; transform: translateX(-50%); background: #1d1e21e6; color: var(--text); padding: 4px 10px; border-radius: 12px; font-size: 12px; pointer-events: none; }
-.toolbar { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 2px; background: #232528ee; border: 1px solid #141516; border-radius: 9px; padding: 4px; box-shadow: 0 6px 20px #0004; }
+.toolbar { position: absolute; top: 12px; left: 12px; display: flex; align-items: center; gap: 2px; background: #232528ee; border: 1px solid #141516; border-radius: 9px; padding: 4px; box-shadow: 0 6px 20px #0004; }
 .toolbar button { display: flex; align-items: center; gap: 6px; background: none; border: 1px solid transparent; border-radius: 6px; padding: 6px 9px; color: #c9c6be; }
 .toolbar button:hover:not(:disabled) { background: var(--panel-3); color: var(--text); }
 .toolbar button.on { background: #3a3324; border-color: var(--accent); color: var(--accent); }
+.toolbar button span { display: none; }
+.toolbar button.on span { display: inline; }
 .toolbar button:disabled { opacity: 0.35; cursor: default; }
 .toolbar .sep { width: 1px; height: 20px; background: var(--line); margin: 0 4px; }
 .views { position: absolute; top: 12px; right: 12px; display: flex; gap: 2px; background: #232528ee; border: 1px solid #141516; border-radius: 9px; padding: 4px; }

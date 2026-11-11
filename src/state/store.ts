@@ -6,7 +6,8 @@ import { newId } from '../core/math';
 import type { Attachment, ComponentInstance, CustomPart, Design, MaterialSpec, Side, ToolId, Transform } from '../core/types';
 import { DesignFormatError, parseDesign, serializeDesign } from '../persistence/schema';
 import { DesignStorage, type DesignMeta } from '../persistence/storage';
-import { computeFitOffsets } from './layering';
+import { computeFit } from './layering';
+import type { SqueezeRange } from '../geometry/types';
 import * as ops from './ops';
 
 export type Placing =
@@ -30,17 +31,31 @@ export interface Confirm {
 const HISTORY_LIMIT = 120;
 export const storage = new DesignStorage();
 
-function stableOffsets(prev: Record<string, number>, design: Design): Record<string, number> {
-  const next = computeFitOffsets(design);
-  const pk = Object.keys(prev);
-  const nk = Object.keys(next);
-  if (pk.length === nk.length && nk.every((k) => prev[k] === next[k])) return prev;
-  return next;
+type Fit = { fitOffsets: Record<string, number>; squeeze: Record<string, SqueezeRange[]> };
+
+/** Recompute layer fitting, reusing previous objects where nothing changed so unaffected meshes do not rebuild. */
+function stableFit(prev: Fit, design: Design): Fit {
+  const next = computeFit(design);
+  const pk = Object.keys(prev.fitOffsets);
+  const nk = Object.keys(next.offsets);
+  const fitOffsets = pk.length === nk.length && nk.every((k) => prev.fitOffsets[k] === next.offsets[k]) ? prev.fitOffsets : next.offsets;
+  let same = Object.keys(prev.squeeze).length === Object.keys(next.squeeze).length;
+  const squeeze: Record<string, SqueezeRange[]> = {};
+  for (const [id, list] of Object.entries(next.squeeze)) {
+    const old = prev.squeeze[id];
+    if (old && JSON.stringify(old) === JSON.stringify(list)) squeeze[id] = old;
+    else {
+      squeeze[id] = list;
+      same = false;
+    }
+  }
+  return { fitOffsets, squeeze: same ? prev.squeeze : squeeze };
 }
 
 export interface EditorState {
   design: Design;
   fitOffsets: Record<string, number>;
+  squeeze: Record<string, SqueezeRange[]>;
   selectedId: string | null;
   hoveredId: string | null;
   tool: ToolId;
@@ -157,6 +172,7 @@ export const useEditor = create<EditorState>((set, get) => {
   return {
     design: initial,
     fitOffsets: {},
+    squeeze: {},
     selectedId: null,
     hoveredId: null,
     tool: 'morph',
@@ -182,7 +198,7 @@ export const useEditor = create<EditorState>((set, get) => {
     apply(next, history = true) {
       const s = get();
       if (next === s.design) return;
-      const patch: Partial<EditorState> = { design: next, fitOffsets: stableOffsets(s.fitOffsets, next), dirty: true };
+      const patch: Partial<EditorState> = { design: next, ...stableFit(s, next), dirty: true };
       if (history && !s.editBase) {
         patch.past = [...s.past.slice(-HISTORY_LIMIT + 1), s.design];
         patch.future = [];
@@ -202,7 +218,7 @@ export const useEditor = create<EditorState>((set, get) => {
     cancelEdit() {
       const s = get();
       if (!s.editBase) return;
-      set({ design: s.editBase, fitOffsets: stableOffsets(s.fitOffsets, s.editBase), editBase: null });
+      set({ design: s.editBase, ...stableFit(s, s.editBase), editBase: null });
     },
     undo() {
       const s = get();
@@ -210,7 +226,7 @@ export const useEditor = create<EditorState>((set, get) => {
       const prev = s.past[s.past.length - 1];
       set({
         design: prev,
-        fitOffsets: stableOffsets(s.fitOffsets, prev),
+        ...stableFit(s, prev),
         past: s.past.slice(0, -1),
         future: [s.design, ...s.future],
         selectedId: s.selectedId && prev.instances[s.selectedId] ? s.selectedId : null,
@@ -224,7 +240,7 @@ export const useEditor = create<EditorState>((set, get) => {
       const next = s.future[0];
       set({
         design: next,
-        fitOffsets: stableOffsets(s.fitOffsets, next),
+        ...stableFit(s, next),
         past: [...s.past, s.design],
         future: s.future.slice(1),
         selectedId: s.selectedId && next.instances[s.selectedId] ? s.selectedId : null,
@@ -342,11 +358,11 @@ export const useEditor = create<EditorState>((set, get) => {
 
     newDesign() {
       const d = ops.emptyDesign();
-      set({ design: d, fitOffsets: {}, past: [], future: [], editBase: null, selectedId: null, placing: null, dirty: false });
+      set({ design: d, fitOffsets: {}, squeeze: {}, past: [], future: [], editBase: null, selectedId: null, placing: null, dirty: false });
       storage.clearDraft();
     },
     replaceDesign(d, note) {
-      set({ design: d, fitOffsets: computeFitOffsets(d), past: [], future: [], editBase: null, selectedId: null, placing: null, dirty: false });
+      set({ design: d, ...stableFit({ fitOffsets: {}, squeeze: {} }, d), past: [], future: [], editBase: null, selectedId: null, placing: null, dirty: false });
       if (note) get().notify(note, 'ok');
     },
     saveDesign() {

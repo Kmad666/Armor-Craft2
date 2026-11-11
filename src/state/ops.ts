@@ -19,7 +19,7 @@ import {
 } from '../core/types';
 import { buildComponent, clampParams, defaultParams, mirrorSurfaceCoords } from '../geometry/build';
 import type { BuildResult } from '../geometry/types';
-import { computeFitOffsets, stackOf } from './layering';
+import { computeFit, stackOf, type FitResult } from './layering';
 
 export const IDENTITY: Transform = { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] };
 
@@ -33,7 +33,7 @@ export function emptyDesign(name = 'Untitled design'): Design {
     createdAt: now,
     updatedAt: now,
     symmetry: true,
-    mannequin: { color: '#8f8f93', showGrid: true },
+    mannequin: { color: '#7b7b80', showGrid: true },
     instances: {},
     roots: [],
     orderCounter: 1,
@@ -150,9 +150,11 @@ export function attachMatrix(r: ResolvedAttachment, mode: 'normalY' | 'normalZ')
   return m;
 }
 
-function buildOf(d: Design, inst: ComponentInstance, fit?: Record<string, number>): BuildResult {
-  const offsets = fit ?? computeFitOffsets(d);
-  return buildComponent(inst.templateId, inst.params, offsets[inst.id] ?? 0, inst.symmetry.mirrored);
+/** Build an instance exactly as the scene renders it (layer offset and squeeze included). */
+export function buildOf(d: Design, inst: ComponentInstance, fit?: FitResult): BuildResult {
+  if (inst.parentId) return buildComponent(inst.templateId, inst.params, 0, inst.symmetry.mirrored);
+  const f = fit ?? computeFit(d);
+  return buildComponent(inst.templateId, inst.params, f.offsets[inst.id] ?? 0, inst.symmetry.mirrored, f.squeeze[inst.id]);
 }
 
 function mirroredAttachment(parentT: TemplateDef, att: Attachment, sameParent: boolean): Attachment {
@@ -167,7 +169,7 @@ function mirroredAttachment(parentT: TemplateDef, att: Attachment, sameParent: b
 }
 
 /** Default mount for an accessory template on a given parent. */
-export function defaultAttachment(d: Design, t: TemplateDef, parent: ComponentInstance, fit?: Record<string, number>): Attachment {
+export function defaultAttachment(d: Design, t: TemplateDef, parent: ComponentInstance, fit?: FitResult): Attachment {
   const pt = TEMPLATE_BY_ID[parent.templateId];
   const spec: MountSpec = t.mounts?.[pt.family] ?? { surface: 0, u: 0, v: 0.6 };
   const build = buildOf(d, parent, fit);
@@ -641,7 +643,7 @@ function nearestVertex(build: BuildResult, p: Vector3): { index: number; dist: n
 }
 
 /** Distance (metres) between an accessory's mount point and its parent's surface. Large values mean it floats. */
-export function attachmentGap(d: Design, id: string, fit?: Record<string, number>): number {
+export function attachmentGap(d: Design, id: string, fit?: FitResult): number {
   const inst = d.instances[id];
   const parent = inst?.parentId ? d.instances[inst.parentId] : null;
   if (!inst || !parent || !inst.attachment) return 0;

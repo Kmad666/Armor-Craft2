@@ -184,6 +184,27 @@ export function sampleProfile(p: PartProfile, y: number): SectionSample {
   };
 }
 
+const HIP_Y = 0.96;
+
+/**
+ * Cross-section used by garments hanging from the torso. Above the hips it is the torso itself;
+ * below, it is the envelope around both legs so skirts, hauberk hems and tassets clear the thighs.
+ */
+export function sampleTorsoHang(y: number): SectionSample {
+  if (y >= HIP_Y) return sampleProfile(PROFILES.torso, y);
+  const hip = sampleProfile(PROFILES.torso, HIP_Y);
+  const yl = Math.max(-LEG_LEN, y - LEG_ORIGIN[1]);
+  const leg = sampleProfile(PROFILES.leg, yl);
+  const legOuter = LEG_ORIGIN[0] + Math.sin(LEG_ROT) * -yl + leg.rx;
+  const k = Math.min(1, (HIP_Y - y) / 0.08);
+  return {
+    cz: hip.cz,
+    rx: Math.max(hip.rx, hip.rx + (legOuter + 0.004 - hip.rx) * k),
+    rz: Math.max(hip.rz * (1 - 0.12 * k), leg.rz + Math.abs(leg.cz) + 0.004),
+    n: hip.n,
+  };
+}
+
 /** Point on a (possibly offset) superellipse ring. Writes [x, z]. */
 export function ringXZ(sec: SectionSample, u: number, off: number, sx = 1, sz = 1): [number, number] {
   const s = Math.sin(u);

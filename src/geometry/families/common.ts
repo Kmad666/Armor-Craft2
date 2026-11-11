@@ -1,7 +1,8 @@
 import { Vector3 } from 'three';
 import type { Vec3 } from '../../core/types';
 import type { MeshBuilder, SurfFn } from '../MeshBuilder';
-import type { HandleKind, HandleSpec, ParamDef } from '../types';
+import type { HandleKind, HandleSpec, ParamDef, SqueezeRange } from '../types';
+import type { PartType } from '../../core/types';
 
 export const DEFORM_PARAMS: ParamDef[] = [
   { key: 'bend', label: 'Bend sideways', min: -1, max: 1, step: 0.01, def: 0, group: 'Deform' },
@@ -78,3 +79,16 @@ export const frac = (x: number) => x - Math.floor(x);
 
 /** Sawtooth used for overlapping lames: 1 at the lower edge of each lame, 0 at its top. */
 export const lameSaw = (v: number, n: number) => (n >= 1 ? 1 - frac(v * n * 0.99999) : 0);
+
+/** 1 = free to drape, 0 = pressed flat by a layer above. Soft 3.5 cm falloff at the edges of each range. */
+export function looseness(ranges: SqueezeRange[] | undefined, part: PartType, y: number): number {
+  if (!ranges || !ranges.length) return 1;
+  let q = 1;
+  for (const r of ranges) {
+    if (r.part !== part) continue;
+    const d = y < r.y0 ? r.y0 - y : y > r.y1 ? y - r.y1 : 0;
+    const k = d >= 0.035 ? 1 : d / 0.035;
+    if (k < q) q = k;
+  }
+  return q * q * (3 - 2 * q);
+}

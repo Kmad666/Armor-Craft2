@@ -185,7 +185,7 @@ export function parseDesign(input: unknown): LoadResult {
     updatedAt: num(raw.updatedAt, now),
     symmetry: raw.symmetry !== false,
     mannequin: {
-      color: isObj(raw.mannequin) && typeof raw.mannequin.color === 'string' ? raw.mannequin.color : '#8f8f93',
+      color: isObj(raw.mannequin) && typeof raw.mannequin.color === 'string' ? raw.mannequin.color : '#7b7b80',
       showGrid: !isObj(raw.mannequin) || raw.mannequin.showGrid !== false,
     },
     instances,

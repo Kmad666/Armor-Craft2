@@ -11,7 +11,7 @@ export default defineConfig({
     viewport: { width: 1440, height: 900 },
     launchOptions: {
       executablePath: process.env.CHROME_PATH || undefined,
-      args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
+      args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--disable-background-networking', '--disable-component-update', '--no-first-run', '--disable-sync'],
     },
   },
   webServer: {

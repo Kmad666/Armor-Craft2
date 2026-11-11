@@ -34,7 +34,7 @@ function Studio() {
     const pmrem = new PMREMGenerator(gl);
     const env = pmrem.fromScene(new RoomEnvironment(), 0.03).texture;
     scene.environment = env;
-    scene.environmentIntensity = 0.85;
+    scene.environmentIntensity = 0.62;
     scene.background = new Color('#b9b4ac');
     return () => {
       env.dispose();
@@ -57,10 +57,10 @@ function Studio() {
   }, []);
   return (
     <>
-      <hemisphereLight args={['#fff6e8', '#6f6a62', 0.55]} />
+      <hemisphereLight args={['#fff6e8', '#6f6a62', 0.38]} />
       <directionalLight
         position={[2.2, 4.2, 3.2]}
-        intensity={2.3}
+        intensity={1.9}
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-bias={-0.0004}
@@ -89,13 +89,14 @@ function Studio() {
 }
 
 function CameraRig() {
-  const { camera, gl, scene } = useThree();
+  const { camera, gl, scene, invalidate } = useThree();
   const ref = useRef<any>(null);
   useEffect(() => {
     bridge.camera = camera as PerspectiveCamera;
     bridge.gl = gl;
     bridge.scene = scene;
-  }, [camera, gl, scene]);
+    bridge.invalidate = () => invalidate();
+  }, [camera, gl, scene, invalidate]);
   useEffect(() => {
     bridge.controls = ref.current;
   });
@@ -109,6 +110,7 @@ function CameraRig() {
     c.target.lerp(a.target, k);
     c.update();
     if (a.t >= 1) bridge.cameraAnim = null;
+    else invalidate();
   });
   return <OrbitControls ref={ref} makeDefault target={HOME_TARGET.toArray()} minDistance={0.25} maxDistance={9} enableDamping dampingFactor={0.12} maxPolarAngle={Math.PI * 0.93} />;
 }
@@ -244,6 +246,7 @@ function PlacementGhost() {
       if (!target) {
         if (!hitPoint) {
           m.visible = false;
+          bridge.invalidate();
           return;
         }
         m.visible = true;
@@ -251,6 +254,7 @@ function PlacementGhost() {
         m.geometry = buildComponent(info.templateId, info.params, 0, false).geometry;
         m.matrix.makeTranslation(hitPoint.x, hitPoint.y, hitPoint.z);
         m.matrixWorldNeedsUpdate = true;
+        bridge.invalidate();
         return;
       }
       const node = bridge.nodes.get(target.parentId);
@@ -265,6 +269,7 @@ function PlacementGhost() {
       node.inner.updateWorldMatrix(true, false);
       m.matrix.copy(node.inner.matrixWorld).multiply(attachMatrix(resolveAttachment(target.attachment, node.build), t.attach ?? 'normalY'));
       m.matrixWorldNeedsUpdate = true;
+      bridge.invalidate();
     };
     placement.update = (x, y) => {
       const { target, hit } = resolve(x, y);
@@ -373,10 +378,11 @@ export function Viewport() {
       }}
     >
       <Canvas
+        frameloop="demand"
         shadows={{ type: PCFSoftShadowMap }}
         dpr={[1, 2]}
         camera={{ fov: 34, near: 0.05, far: 60, position: [1.9, 1.35, 3.05] }}
-        gl={{ antialias: true, preserveDrawingBuffer: true, toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1.0 }}
+        gl={{ antialias: true, preserveDrawingBuffer: true, toneMapping: ACESFilmicToneMapping, toneMappingExposure: 0.95 }}
         onPointerMissed={(e) => {
           const s = useEditor.getState();
           if (!s.placing && e.type === 'click') s.select(null);

@@ -3,14 +3,13 @@
 // are all parameter presets of this one generator.
 
 import { Matrix4, SphereGeometry, Vector3 } from 'three';
-import { PROFILES, leftPartToPart, ringXZ, sampleProfile } from '../../body/body';
+import { PROFILES, leftPartToPart, ringXZ, sampleProfile, sampleTorsoHang } from '../../body/body';
 import { clamp, lerp, linspace, wrapAngle } from '../../core/math';
 import type { PartType } from '../../core/types';
 import { GROUP_BASE, GROUP_DETAIL, GROUP_TRIM, MeshBuilder, uniqueSorted, type SurfFn } from '../MeshBuilder';
 import type { CoverRange, Family, HandleSpec } from '../types';
-import { DEFORM_PARAMS, FIT_PARAMS, applyDeformers, finishHandles, frac, lameSaw, surfHandle } from './common';
+import { DEFORM_PARAMS, FIT_PARAMS, applyDeformers, finishHandles, frac, lameSaw, looseness, surfHandle } from './common';
 
-const HIP_Y = 0.96;
 const EPS = 2e-4;
 const rivetGeo = new SphereGeometry(1, 7, 5);
 
@@ -82,6 +81,12 @@ export const shell: Family = {
     return out;
   },
 
+  bulk(p, cfgAny) {
+    const cfg = cfgAny as ShellCfg;
+    if (cfg.cloth) return 0;
+    return Math.max(0, p.bulge ?? 0) * 0.03 + ((p.lames ?? 0) >= 1 ? (p.lameDepth ?? 0) : 0) + Math.max(0, p.ridge ?? 0) * 0.004;
+  },
+
   build(p, ctx, cfgAny) {
     const cfg = cfgAny as ShellCfg;
     const prof = PROFILES[cfg.part as 'torso' | 'arm' | 'leg' | 'head'];
@@ -102,6 +107,7 @@ export const shell: Family = {
     const trimW = cfg.cloth ? Math.min(p.trim ?? 0, 0.03) : (p.trim ?? 0);
     const vTrim = trimW > 0.0005 ? clamp(trimW / H, 0, 0.3) : 0;
     const torso = cfg.part === 'torso';
+    const soft = !!cfg.cloth;
     const midSec = sampleProfile(prof, clamp((yb + yt) / 2, prof.ys[0], prof.ys[prof.ys.length - 1]));
     const uvR = (midSec.rx + midSec.rz) / 2 + baseOff;
     const lamRows = style === 'lamellar' ? Math.max(2, Math.round(H / 0.042)) : 0;
@@ -132,20 +138,20 @@ export const shell: Family = {
       return (u, v, off, out) => {
         const [yB, yT] = edge(u);
         const y = yB + (yT - yB) * v;
-        const ys = torso ? Math.max(y, HIP_Y) : y;
-        const sec = sampleProfile(prof, ys);
+        const sec = torso ? sampleTorsoHang(y) : sampleProfile(prof, y);
         const du = wrapAngle(u - center);
         const cu = Math.cos(du);
         let o = baseOff + off;
         if (vTrim > 0 && (v < vTrim || v > 1 - vTrim)) o += cfg.cloth ? 0.0012 : 0.0028;
         const iv = 1 - v;
-        o += (p.flare ?? 0) * 0.25 * H * iv * iv + (p.flareTop ?? 0) * 0.2 * H * v * v;
-        if (p.bulge) o += p.bulge * 0.04 * Math.sin(Math.PI * v) * (cfg.bulgeFront ? 0.5 + 0.5 * cu : 1);
+        const loose = soft ? looseness(ctx.squeeze, cfg.part, y) : 1;
+        o += ((p.flare ?? 0) * 0.25 * H * iv * iv + (p.flareTop ?? 0) * 0.2 * H * v * v) * loose;
+        if (p.bulge) o += p.bulge * 0.04 * Math.sin(Math.PI * v) * (cfg.bulgeFront ? 0.5 + 0.5 * cu : 1) * loose;
         if (p.ridge && cu > 0) o += p.ridge * 0.02 * Math.pow(cu, 14) * Math.pow(Math.sin(Math.PI * clamp(v, 0, 1)), 0.5);
         if (nLames >= 1) o += lameDepth * lameSaw(v, nLames);
         if (folds > 0) {
           const hang = cfg.part === 'torso' ? 0.25 + 0.75 * iv : 0.6;
-          o += folds * 0.011 * hang * (Math.sin(foldCount * u + 1.3 * Math.sin(3 * v + u)) * 0.75 + 0.25 * Math.sin(foldCount * 2.3 * u + 2));
+          o += loose * folds * 0.011 * hang * (Math.sin(foldCount * u + 1.3 * Math.sin(3 * v + u)) * 0.75 + 0.25 * Math.sin(foldCount * 2.3 * u + 2));
         }
         if (relief > 0) {
           switch (style) {
@@ -271,10 +277,11 @@ export const shell: Family = {
           const y = lerp(yEnd, yTopS, v);
           const sec = sampleProfile(arm, y);
           let o = baseOff + off + 0.002;
+          const loose = looseness(ctx.squeeze, 'arm', y);
           if (vt > 0 && v < vt) o += 0.0012;
-          if (folds > 0) o += folds * 0.006 * (1 - v) * Math.sin(8 * u + 5 * v);
+          if (folds > 0) o += loose * folds * 0.006 * (1 - v) * Math.sin(8 * u + 5 * v);
           if (style === 'quilt') o += relief * 0.004 * Math.pow(Math.abs(Math.sin(v * Ls * 60)), 0.7);
-          o += (p.flare ?? 0) * 0.05 * (1 - v) * (1 - v);
+          o += loose * (p.flare ?? 0) * 0.05 * (1 - v) * (1 - v);
           let rx = y <= 0.035 ? sec.rx + o : 0;
           let rz = y <= 0.035 ? sec.rz + o : 0;
           if (y > -0.075) {

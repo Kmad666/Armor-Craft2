@@ -43,6 +43,14 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
   setView,
   pick,
   projectLocal,
+  /** Client coordinates of a world-space point. */
+  projectWorld(p: [number, number, number]) {
+    const { camera, gl } = bridge;
+    if (!camera || !gl) return null;
+    const v = new Vector3(...p).project(camera);
+    const r = gl.domElement.getBoundingClientRect();
+    return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height };
+  },
   /** Client coordinates of a morph handle of a component. */
   handlePos(id: string, handleId: string) {
     const b = currentBuild(id);

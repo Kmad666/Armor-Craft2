@@ -22,8 +22,8 @@ function outlineMaterial(color: string, width: number) {
     fragmentShader: `uniform vec3 uColor; void main(){ gl_FragColor = vec4(uColor,1.0); }`,
   });
 }
-const selectedOutline = outlineMaterial('#ffb347', 0.0032);
-const hoverOutline = outlineMaterial('#7fc4ff', 0.002);
+const selectedOutline = outlineMaterial('#ffb347', 0.0019);
+const hoverOutline = outlineMaterial('#7fc4ff', 0.0012);
 
 const HANDLE_COLORS: Record<string, string> = { trim: '#ffb347', size: '#5fb2ff', shape: '#7be08d' };
 const tmpV = new Vector3();
@@ -53,6 +53,13 @@ function HandleDot({ id, h }: { id: string; h: HandleSpec }) {
       }
     };
   }, []);
+  useEffect(
+    () => () => {
+      document.body.style.cursor = '';
+      window.dispatchEvent(new CustomEvent('atelier-handle', { detail: null }));
+    },
+    [],
+  );
   useFrame(({ camera }) => {
     const g = ref.current;
     if (!g || !g.parent) return;
@@ -129,7 +136,8 @@ function NodeBody({ id, parentBuild }: Props) {
   const innerRef = useRef<Group>(null);
   const meshRef = useRef<Mesh>(null);
 
-  const build = useMemo(() => buildComponent(inst.templateId, inst.params, fit, inst.symmetry.mirrored), [inst.templateId, inst.params, fit, inst.symmetry.mirrored]);
+  const squeeze = useEditor((s) => (inst.parentId ? undefined : s.squeeze[id]));
+  const build = useMemo(() => buildComponent(inst.templateId, inst.params, fit, inst.symmetry.mirrored, squeeze), [inst.templateId, inst.params, fit, inst.symmetry.mirrored, squeeze]);
   const materials = useMemo(() => materialsFor(inst.materials, !!t.doubleSided), [inst.materials, t.doubleSided]);
 
   const frame = useMemo(() => {
@@ -138,11 +146,11 @@ function NodeBody({ id, parentBuild }: Props) {
   }, [inst.parentId, inst.attachment, inst.region, parentBuild, t.attach]);
 
   useEffect(() => {
-    if (!innerRef.current || !userRef.current || !meshRef.current) return;
-    bridge.nodes.set(id, { id, inner: innerRef.current, user: userRef.current, mesh: meshRef.current, build });
+    const mesh = meshRef.current;
+    if (!innerRef.current || !userRef.current || !mesh) return;
+    bridge.nodes.set(id, { id, inner: innerRef.current, user: userRef.current, mesh, build });
     return () => {
-      const cur = bridge.nodes.get(id);
-      if (cur && cur.mesh === meshRef.current) bridge.nodes.delete(id);
+      if (bridge.nodes.get(id)?.mesh === mesh) bridge.nodes.delete(id);
     };
   });
   useEffect(() => {

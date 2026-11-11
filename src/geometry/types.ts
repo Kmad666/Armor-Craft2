@@ -46,6 +46,14 @@ export interface BuildCtx {
   fitOffset: number;
   /** Build the x-mirrored (right side) version. */
   mirror: boolean;
+  /** Stretches of the body where a layer above presses this (soft) piece flat against the body. */
+  squeeze?: SqueezeRange[];
+}
+
+export interface SqueezeRange {
+  part: PartType;
+  y0: number;
+  y1: number;
 }
 
 export interface BuildResult {
@@ -63,4 +71,6 @@ export interface Family {
   slots: string[];
   build(p: Record<string, number>, ctx: BuildCtx, cfg: Record<string, any>): BuildResult;
   coverage?(p: Record<string, number>, cfg: Record<string, any>): CoverRange[];
+  /** Extra bulk (metres) that layers above must clear, beyond the nominal thickness. */
+  bulk?(p: Record<string, number>, cfg: Record<string, any>): number;
 }

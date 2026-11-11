@@ -232,8 +232,8 @@ const DEFS: Record<Exclude<TextureKind, 'none'>, TexDef> = {
   hammered: {
     size: 128,
     tilesPerMetre: 11,
-    shade: 0.25,
-    bump: 1.2,
+    shade: 0.15,
+    bump: 0.9,
     draw(ctx, s, rnd) {
       ctx.fillStyle = '#c0c0c0';
       ctx.fillRect(0, 0, s, s);

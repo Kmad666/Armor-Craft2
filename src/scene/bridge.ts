@@ -28,6 +28,8 @@ export const bridge = {
   nodes: new Map<string, NodeRef>(),
   mannequin: new Map<PartId, Mesh>(),
   cameraAnim: null as null | { pos: Vector3; target: Vector3; t: number },
+  /** Request a frame (the canvas renders on demand). */
+  invalidate: () => {},
 };
 
 const raycaster = new Raycaster();
@@ -89,7 +91,7 @@ export function pick(clientX: number, clientY: number, exclude: Set<string> = ne
   const targets: Object3D[] = [];
   const design = useEditor.getState().design;
   for (const [id, node] of bridge.nodes) {
-    if (exclude.has(id) || !design.instances[id]) continue;
+    if (exclude.has(id) || !design.instances[id] || !node.mesh.parent) continue;
     targets.push(node.mesh);
   }
   for (const m of bridge.mannequin.values()) targets.push(m);
@@ -160,6 +162,7 @@ export const HOME_TARGET = new Vector3(0, 0.93, 0);
 export function setView(name: keyof typeof VIEWS | string) {
   const v = VIEWS[name] ?? VIEWS.quarter;
   bridge.cameraAnim = { pos: new Vector3(...v), target: HOME_TARGET.clone(), t: 0 };
+  bridge.invalidate();
 }
 
 export function focusOn(id: string | null) {
@@ -172,6 +175,7 @@ export function focusOn(id: string | null) {
   const dir = camera.position.clone().sub(controls.target).normalize();
   const dist = Math.max(0.35, (sphere.radius / Math.sin((camera.fov * Math.PI) / 360)) * 1.25);
   bridge.cameraAnim = { pos: sphere.center.clone().addScaledVector(dir, dist), target: sphere.center.clone(), t: 0 };
+  bridge.invalidate();
 }
 
 /** Project a geometry-local point of a component to client (CSS pixel) coordinates. Used by tests and tutorials. */
@@ -197,6 +201,6 @@ export function currentBuild(id: string): BuildResult | null {
   const s = useEditor.getState();
   const inst = s.design.instances[id];
   if (!inst || !TEMPLATE_BY_ID[inst.templateId]) return null;
-  const root = inst.parentId ? null : inst;
-  return buildComponent(inst.templateId, inst.params, root ? (s.fitOffsets[inst.id] ?? 0) : 0, inst.symmetry.mirrored);
+  if (inst.parentId) return buildComponent(inst.templateId, inst.params, 0, inst.symmetry.mirrored);
+  return buildComponent(inst.templateId, inst.params, s.fitOffsets[inst.id] ?? 0, inst.symmetry.mirrored, s.squeeze[inst.id]);
 }

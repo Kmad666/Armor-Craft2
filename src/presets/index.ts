@@ -2,6 +2,7 @@
 // so they double as integration tests and stay fully editable once opened.
 
 import { materialFromPreset } from '../catalog/materials';
+import { TEMPLATE_BY_ID } from '../catalog/templates';
 import type { Design, MaterialSpec, Transform } from '../core/types';
 import * as ops from '../state/ops';
 
@@ -54,18 +55,13 @@ class Builder {
   }
 }
 
-import { TEMPLATE_BY_ID } from '../catalog/templates';
-import { buildComponent } from '../geometry/build';
-import { computeFitOffsets } from '../state/layering';
-
 function require_template(id: string) {
   const t = TEMPLATE_BY_ID[id];
   if (!t) throw new Error(`Preset references unknown template ${id}`);
   return t;
 }
 function parentBuild(d: Design, id: string) {
-  const inst = d.instances[id];
-  return buildComponent(inst.templateId, inst.params, computeFitOffsets(d)[id] ?? 0, inst.symmetry.mirrored);
+  return ops.buildOf(d, d.instances[id]);
 }
 
 export function romanGuard(): Design {
@@ -117,8 +113,8 @@ export function hornedGuardian(): Design {
   b.add('torso_mail', { trimBottom: 0.1, sleeve: 0.55 }, { base: 'darkMail' });
   const cuirass = b.add('torso_cuirass', { trimBottom: 0.07, frontDip: -0.04, bulge: 0.55, ridge: 0.6 }, { base: teal, trim: 'gold' });
   b.add('waist_tassets', { flare: 0.4 }, { base: teal, trim: 'gold' });
-  b.attach('acc_plate_diamond', cuirass, { width: 0.11, height: 0.12 }, { base: 'darkSteel', trim: 'gold' }, { u: 0, v: 0.74 });
-  b.attach('acc_emblem_sun', cuirass, { radius: 0.03 }, { base: 'gold' }, { u: 0, v: 0.76 }, { position: [0, 0, 0.012] });
+  b.attach('acc_plate_diamond', cuirass, { width: 0.11, height: 0.12, bow: 0.014, wrap: 0.75 }, { base: 'darkSteel', trim: 'gold' }, { u: 0, v: 0.74 });
+  b.attach('acc_emblem_sun', cuirass, { radius: 0.03 }, { base: 'gold' }, { u: 0, v: 0.76 }, { position: [0, 0, 0.022] });
   // Spangenhelm base with a stretched dome and deliberately mismatched horns.
   const helm = b.add('helm_spangen', { height: 0.175, width: 1.06, crown: 1.7, cheek: 0.09, back: 0.09, tail: 0.6 }, { base: 'darkSteel', trim: 'gold' });
   const horns = b.attach('acc_horn_curved', helm, { length: 0.3, radius: 0.03, curvature: 1.9, rings: 0.5 }, { base: 'bone', trim: 'gold' }, { u: 1.2, v: 0.66 });

@@ -19,10 +19,10 @@ const P = (
 ): MaterialPreset => ({ preset, name, group, kind, color, metalness, roughness, texture, textureIntensity, wear });
 
 export const MATERIAL_PRESETS: MaterialPreset[] = [
-  P('steel', 'Polished steel', 'Metals', 'metal', '#c8ccd2', 1, 0.24, 'brushed', 0.25),
+  P('steel', 'Polished steel', 'Metals', 'metal', '#b9bdc4', 1, 0.26, 'brushed', 0.25),
   P('darkSteel', 'Darkened steel', 'Metals', 'metal', '#474b54', 1, 0.36, 'brushed', 0.3),
   P('blackened', 'Blackened iron', 'Metals', 'metal', '#1f2126', 0.9, 0.48, 'hammered', 0.4),
-  P('iron', 'Iron', 'Metals', 'metal', '#77726c', 0.95, 0.52, 'hammered', 0.5, 0.25),
+  P('iron', 'Iron', 'Metals', 'metal', '#8a8580', 0.95, 0.46, 'hammered', 0.35, 0.15),
   P('bronze', 'Bronze', 'Metals', 'metal', '#a8733a', 1, 0.34, 'brushed', 0.3),
   P('brass', 'Brass', 'Metals', 'metal', '#c9a24a', 1, 0.3, 'brushed', 0.25),
   P('copper', 'Copper', 'Metals', 'metal', '#b8643c', 1, 0.32, 'brushed', 0.25),
