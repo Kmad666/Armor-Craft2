@@ -35,7 +35,7 @@ export function getMaterial(spec: MaterialSpec, doubleSided = false): Material {
   };
   let m: Material;
   if (soft) {
-    m = new MeshPhysicalMaterial({ ...common, sheen: 0.9, sheenRoughness: 0.55, sheenColor: color.clone().lerp(new Color('#ffffff'), 0.45), envMapIntensity: 0.35 });
+    m = new MeshPhysicalMaterial({ ...common, sheen: 0.5, sheenRoughness: 0.6, sheenColor: color.clone().lerp(new Color('#ffffff'), 0.2), envMapIntensity: 0.3 });
   } else if (spec.kind === 'metal' && spec.metalness < 0.7) {
     // painted / lacquered metal: a glossy coat over a partly metallic base
     m = new MeshPhysicalMaterial({ ...common, clearcoat: 0.7, clearcoatRoughness: 0.18, envMapIntensity: 1 });

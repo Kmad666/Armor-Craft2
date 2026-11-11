@@ -238,8 +238,8 @@ export function addFoot(b: MeshBuilder, o: FootOpts): SurfFn {
     let k = o.gap + off;
     if (o.lames >= 1 && v > 0.42) k += 0.003 * lameSaw((1 - v) / 0.58, o.lames);
     const endTaper = v < 0.04 ? Math.sqrt(v / 0.04) : v > 0.97 ? Math.sqrt(Math.max(0, (1 - v) / 0.03)) : 1;
-    const rx = (hermite(footZs, footRx, zs) + k) * o.width * pt * (0.15 + 0.85 * endTaper);
-    const ry = (hermite(footZs, footRy, zs) + k) * (0.15 + 0.85 * endTaper);
+    const rx = (hermite(footZs, footRx, zs) + k) * o.width * pt * (0.02 + 0.98 * endTaper);
+    const ry = (hermite(footZs, footRy, zs) + k) * (0.02 + 0.98 * endTaper);
     const cy = hermite(footZs, footCy, zs);
     const s = Math.sin(u);
     const c = Math.cos(u);

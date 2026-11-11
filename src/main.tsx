@@ -8,6 +8,7 @@ import { PRESETS } from './presets';
 import { bridge, currentBuild, pick, projectLocal, setView } from './scene/bridge';
 import * as ops from './state/ops';
 import { storage, useEditor } from './state/store';
+import { requestTemplateThumb, useThumbs } from './ui/thumbnails';
 import './styles.css';
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -40,6 +41,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
   templateById: TEMPLATE_BY_ID,
   presets: PRESETS,
   buildStats,
+  thumbs: { request: requestTemplateThumb, store: useThumbs },
   setView,
   pick,
   projectLocal,
@@ -48,6 +50,19 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
     const { camera, gl } = bridge;
     if (!camera || !gl) return null;
     const v = new Vector3(...p).project(camera);
+    const r = gl.domElement.getBoundingClientRect();
+    return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height };
+  },
+  /** Client coordinates of a point on the move-gizmo arrow for an axis of the selected component. */
+  gizmoPoint(id: string, axis: 0 | 1 | 2) {
+    const n = bridge.nodes.get(id);
+    const { camera, gl } = bridge;
+    if (!n || !camera || !gl) return null;
+    n.user.updateWorldMatrix(true, false);
+    const o = new Vector3().setFromMatrixPosition(n.user.matrixWorld);
+    const dir = new Vector3().setFromMatrixColumn(n.user.matrixWorld, axis).normalize();
+    const unit = o.distanceTo(camera.position) * Math.min((1.9 * Math.tan((Math.PI * camera.fov) / 360)) / camera.zoom, 7) * (0.62 / 4);
+    const v = o.addScaledVector(dir, unit * 0.42).project(camera);
     const r = gl.domElement.getBoundingClientRect();
     return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height };
   },

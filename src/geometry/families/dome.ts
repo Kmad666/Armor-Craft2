@@ -102,51 +102,52 @@ export const dome: Family = {
     const slitD = 0.02;
     const hole = p.faceHole ?? 0;
 
-    const fn: SurfFn = (u, v, off, out) => {
+    /** Lower wall at absolute depth `d` below the brow line. */
+    const wall = (u: number, d: number, off: number, out: Vector3, raise = 0) => {
       const du = wrapAngle(u);
       const a = Math.abs(du);
       const cu = Math.cos(du);
-      let o = gap + off;
-      let y: number;
+      let o = gap + off + raise;
       let rs = 1;
-      let cz = 0;
-      const depth = depthAt(u);
+      const dn = d / 0.15;
+      const wB = smoothstep(Math.PI - 1.5, Math.PI - 0.7, a);
+      rs += (p.flare ?? 0) * 0.22 * dn * dn + (p.tail ?? 0) * 0.42 * wB * Math.pow(dn, 1.6);
+      rs -= (p.hug ?? 0) * 0.13 * smoothstep(0.03, 0.2, d) * (0.45 + 0.55 * Math.abs(Math.sin(du)));
+      const cz = 0.012 * Math.min(1.4, dn) * (cu > 0 ? cu : 0);
+      if (p.snout && cu > 0) o += p.snout * Math.exp(-Math.pow(a / 0.55, 2)) * Math.exp(-Math.pow((d - 0.075) / 0.05, 2));
+      if (p.drape && d > 0.15) o += p.drape * (d - 0.15) * 1.25;
+      if (nLames >= 1 && d > 0.03) o += 0.0032 * lameSaw((d - 0.03) / Math.max(0.01, Dmax - 0.03), nLames) * (1 - (cu > 0.3 && front < 0.05 ? 1 : 0));
+      if ((p.browBand ?? 0) > 0 && d < browLo) o += 0.0024;
+      out.set((RX * (p.width ?? 1) * rs + o) * Math.sin(du), Y_E - d, cz + (RZ * (p.depth ?? 1) * rs + o) * Math.cos(du));
+    };
+
+    const fn: SurfFn = (u, v, off, out) => {
       if (v <= V_E) {
-        const dRow = dOfV(v);
-        const d = Math.min(dRow, depth);
-        y = Y_E - d;
-        const dn = d / 0.15;
-        const wB = smoothstep(Math.PI - 1.5, Math.PI - 0.7, a);
-        rs += (p.flare ?? 0) * 0.22 * dn * dn + (p.tail ?? 0) * 0.42 * wB * Math.pow(dn, 1.6);
-        rs -= (p.hug ?? 0) * 0.13 * smoothstep(0.03, 0.2, d) * (0.45 + 0.55 * Math.abs(Math.sin(du)));
-        cz += 0.012 * Math.min(1.4, dn) * (cu > 0 ? cu : 0);
-        if (p.snout && cu > 0) o += p.snout * Math.exp(-Math.pow(a / 0.55, 2)) * Math.exp(-Math.pow((d - 0.075) / 0.05, 2));
-        if (p.drape && d > 0.15) o += p.drape * (d - 0.15) * 1.25;
-        if (nLames >= 1 && d > 0.03) o += 0.0032 * lameSaw((d - 0.03) / Math.max(0.01, Dmax - 0.03), nLames) * (1 - (cu > 0.3 && front < 0.05 ? 1 : 0));
-        if (trimW > 0 && depth - dRow < trimW) o += 0.0022;
-        if ((p.browBand ?? 0) > 0 && d < browLo) o += 0.0024;
-      } else {
-        const phi = phiOfV(v);
-        const s = Math.sin(phi);
-        const c = Math.cos(phi);
-        const up = H * Math.pow(s, e);
-        y = Y_E + up;
-        rs = Math.pow(Math.max(c, 0), e);
-        cz += (p.apexShift ?? 0) * s * s;
-        if ((p.browBand ?? 0) > 0 && up < browHi) o += 0.0024;
-        if (nb > 0 && up >= browHi * 0.5) {
-          for (let k = 0; k < nb; k++) {
-            if (Math.abs(wrapAngle(du - (k * Math.PI * 2) / nb)) < bandW) {
-              o += nb > 8 ? 0.0028 : 0.0024;
-              break;
-            }
+        wall(u, Math.min(dOfV(v), depthAt(u)), off, out);
+        return;
+      }
+      const du = wrapAngle(u);
+      let o = gap + off;
+      const phi = phiOfV(v);
+      const s = Math.sin(phi);
+      const c = Math.cos(phi);
+      const up = H * Math.pow(s, e);
+      const y = Y_E + up;
+      const rs = Math.pow(Math.max(c, 0), e);
+      const cz = (p.apexShift ?? 0) * s * s * s * s;
+      if ((p.browBand ?? 0) > 0 && up < browHi) o += 0.0024;
+      if (nb > 0 && up >= browHi * 0.5) {
+        for (let k = 0; k < nb; k++) {
+          if (Math.abs(wrapAngle(du - (k * Math.PI * 2) / nb)) < bandW) {
+            o += nb > 8 ? 0.0028 : 0.0024;
+            break;
           }
         }
-        if (p.ridge) o += p.ridge * Math.exp(-Math.pow(Math.sin(du) / 0.085, 2)) * Math.pow(s, 0.45) * (1 - 0.15 * c);
       }
+      if (p.ridge) o += p.ridge * Math.exp(-Math.pow(Math.sin(du) / 0.085, 2)) * Math.pow(s, 0.45) * (1 - 0.15 * c);
       const rr = Math.max(rs, 0);
       const ox = rr < 0.02 ? o * (rr / 0.02) : o;
-      out.set(((RX + 0) * (p.width ?? 1) * rr + ox) * Math.sin(du), y + (rr < 0.02 ? o - ox : 0), cz + (RZ * (p.depth ?? 1) * rr + ox) * Math.cos(du));
+      out.set((RX * (p.width ?? 1) * rr + ox) * Math.sin(du), y + (rr < 0.02 ? o - ox : 0), cz + (RZ * (p.depth ?? 1) * rr + ox) * Math.cos(du));
     };
 
     // rows
@@ -164,6 +165,11 @@ export const dome: Family = {
       const a = vOfD(Math.min(Dmax, slitD + slitH));
       const c = vOfD(Math.min(Dmax, slitD));
       vs.push(a, c);
+    }
+    if (hole > 0) {
+      const d0 = Math.max(0, 0.062 - 0.082 * hole - 0.006);
+      const d1 = Math.min(Dmax, 0.062 + 0.082 * hole + 0.006);
+      for (const d of linspace(d0, d1, Math.ceil((d1 - d0) / 0.005))) vs.push(vOfD(d));
     }
     for (let k = 1; k < nLames; k++) {
       const d = 0.03 + ((Dmax - 0.03) * k) / nLames;
@@ -183,6 +189,10 @@ export const dome: Family = {
       }
     }
     if (slitH > 0) us.push(-0.62, 0.62, -0.045, 0.045);
+    if (hole > 0) {
+      const w = 0.7 * hole + 0.08;
+      us.push(...linspace(-w, w, Math.ceil((w * 2) / 0.03)));
+    }
     us = uniqueSorted(us, 5e-5);
 
     const thickness = cfg.soft ? 0 : (p.thickness ?? 0.004);
@@ -205,7 +215,6 @@ export const dome: Family = {
             const hy = (d - 0.062) / (0.082 * hole);
             if (hx * hx + hy * hy < 1 && depth > 0.062 + 0.082 * hole) return -1;
           }
-          if (trimW > 0 && depth - d < trimW) return GROUP_TRIM;
           if ((p.browBand ?? 0) > 0 && d < browLo) return GROUP_TRIM;
           return GROUP_BASE;
         }
@@ -217,6 +226,15 @@ export const dome: Family = {
         return GROUP_BASE;
       },
     });
+
+    // rim trim: a band that follows the lower edge exactly, however it curves
+    if (trimW > 0.0005) {
+      const rfn: SurfFn = (u, v, off, out) => {
+        const depth = depthAt(u);
+        wall(u, Math.max(0, depth - trimW * (1 - v) * Math.min(1, depth / (trimW * 1.5))), off, out, 0.0024);
+      };
+      b.addSurface({ us: linspace(-Math.PI, Math.PI, 144), vs: [0, 0.5, 1], fn: rfn, closedU: true, thickness: 0.0024 + (thickness || 0.002), uvScale: [0.09, trimW], group: GROUP_TRIM });
+    }
 
     // brim / peak
     const brim = p.brim ?? 0;

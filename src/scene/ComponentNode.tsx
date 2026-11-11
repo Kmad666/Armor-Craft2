@@ -107,7 +107,7 @@ function HandleDot({ id, h }: { id: string; h: HandleSpec }) {
           window.dispatchEvent(new CustomEvent('atelier-handle', { detail: null }));
         }}
       >
-        <sphereGeometry args={[2.6, 10, 8]} />
+        <sphereGeometry args={[1.5, 10, 8]} />
         <meshBasicMaterial visible={false} />
       </mesh>
     </group>

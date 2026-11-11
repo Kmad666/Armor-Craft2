@@ -36,7 +36,7 @@ export function buildMannequinPart(id: PartId): BufferGeometry {
       b.addGeometry(sphere, m);
       // ears
       for (const s of [-1, 1]) {
-        m.makeScale(0.008, 0.022, 0.014).setPosition(s * 0.076, 1.67, -0.004);
+        m.makeScale(0.006, 0.017, 0.011).setPosition(s * 0.0755, 1.668, -0.006);
         b.addGeometry(sphere, m);
       }
       break;
