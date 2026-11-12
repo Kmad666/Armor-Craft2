@@ -156,6 +156,7 @@ function Vec3Row({ label, value, unit, step, onChange }: { label: string; value:
 
 function TransformTab({ inst }: { inst: ComponentInstance }) {
   const s = useEditor.getState;
+  const [repeat, setRepeat] = useState(6);
   const fit = useEditor((st) => st.fitOffsets[inst.id]);
   const design = useEditor((st) => st.design);
   const gap = useMemo(() => (inst.parentId ? attachmentGap(design, inst.id) : 0), [design, inst.id, inst.parentId]);
@@ -191,9 +192,18 @@ function TransformTab({ inst }: { inst: ComponentInstance }) {
             <button className="btn" onClick={() => s().setPlacing({ kind: 'move', id: inst.id })}>
               <Icon name="pin" size={13} /> Re-place
             </button>
-            <button className="btn" onClick={() => s().snapToSurface(inst.id)}>
+            <button className="btn" data-testid="snap-surface" onClick={() => s().snapToSurface(inst.id)}>
               Snap to surface
             </button>
+          </div>
+          <div className="row-buttons">
+            <button className="btn" data-testid="repeat-around" title="Copy this accessory evenly around its parent (rivet rows, spike crowns)" onClick={() => s().repeatAround(inst.id, repeat)}>
+              <Icon name="duplicate" size={13} /> Repeat around
+            </button>
+            <span className="num repeat">
+              <input type="number" min={2} max={48} value={repeat} data-testid="repeat-count" onKeyDown={(e) => e.stopPropagation()} onChange={(e) => setRepeat(Math.min(48, Math.max(2, parseInt(e.target.value, 10) || 2)))} />
+              <em>×</em>
+            </span>
           </div>
         </>
       )}

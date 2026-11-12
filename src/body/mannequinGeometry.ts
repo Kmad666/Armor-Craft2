@@ -45,9 +45,7 @@ export function buildMannequinPart(id: PartId): BufferGeometry {
       loft(b, PROFILES.torso, 56, 48);
       break;
     case 'arm':
-      loft(b, PROFILES.arm, 36, 24);
-      m.makeScale(0.058, 0.058, 0.058).setPosition(0, 0, 0);
-      b.addGeometry(sphere, m);
+      loft(b, PROFILES.arm, 44, 24);
       break;
     case 'leg':
       loft(b, PROFILES.leg, 44, 28);

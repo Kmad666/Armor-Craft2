@@ -363,3 +363,19 @@ describe('custom parts and presets', () => {
     expect(helm.children.map((c) => roman.instances[c].templateId).sort()).toEqual(['acc_crest_brush', 'acc_faceplate']);
   });
 });
+
+describe('repeated ornaments', () => {
+  it('repeats an accessory evenly around a closed surface', () => {
+    let { design: d, ids } = ops.addFitted(ops.emptyDesign(), 'helm_kettle');
+    const rivet = ops.autoAttach(d, 'acc_rivet', ids[0], { symmetric: false });
+    const r = ops.repeatAround(rivet.design, rivet.ids[0], 8);
+    expect(r.ids.length).toBe(7);
+    const us = [rivet.ids[0], ...r.ids].map((id) => r.design.instances[id].attachment!.u).sort((a, b) => a - b);
+    for (let i = 1; i < us.length; i++) expect(us[i] - us[i - 1]).toBeCloseTo(Math.PI / 4, 5);
+    for (const id of r.ids) expect(ops.attachmentGap(r.design, id)).toBeLessThan(0.02);
+    // copies that would fall off an open edge are skipped
+    const bp = ops.addFitted(ops.emptyDesign(), 'torso_breastplate');
+    const boss = ops.autoAttach(bp.design, 'acc_rivet', bp.ids[0], { symmetric: false });
+    expect(ops.repeatAround(boss.design, boss.ids[0], 8).ids.length).toBeLessThan(7);
+  });
+});

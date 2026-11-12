@@ -122,6 +122,7 @@ export interface EditorState {
   resetShape(id: string): void;
   resetTransform(id: string): void;
   snapToSurface(id: string): void;
+  repeatAround(id: string, count: number): void;
   setSymmetry(on: boolean): void;
   setMannequin(patch: Partial<Design['mannequin']>): void;
   renameDesign(name: string): void;
@@ -189,8 +190,8 @@ export const useEditor = create<EditorState>((set, get) => {
     confirm: null,
     dialog: null,
     tutorialStep: null,
-    leftOpen: true,
-    rightOpen: true,
+    leftOpen: typeof window === 'undefined' || window.innerWidth >= 900,
+    rightOpen: typeof window === 'undefined' || window.innerWidth >= 900,
     catalogCategory: 'head',
     catalogEra: 'all',
     nodeTick: 0,
@@ -330,6 +331,16 @@ export const useEditor = create<EditorState>((set, get) => {
     resetShape: (id) => run((d) => ops.resetShape(d, id)),
     resetTransform: (id) => run((d) => ops.resetTransform(d, id)),
     snapToSurface: (id) => run((d) => ops.snapToSurface(d, id)),
+    repeatAround: (id, count) => {
+      try {
+        const r = ops.repeatAround(get().design, id, count);
+        if (!r.ids.length) return get().notify('Nothing to repeat here.', 'info');
+        get().apply(r.design);
+        get().notify(`Added ${r.ids.length} cop${r.ids.length === 1 ? 'y' : 'ies'} around the surface.`, 'ok');
+      } catch (e: any) {
+        get().notify(e?.message ?? 'Repeat failed.', 'error');
+      }
+    },
     setSymmetry: (on) => run((d) => ops.setSymmetry(d, on)),
     setMannequin: (patch) => run((d) => ({ ...d, mannequin: { ...d.mannequin, ...patch } })),
     renameDesign: (name) => run((d) => ({ ...d, name: name.trim().slice(0, 80) || d.name })),

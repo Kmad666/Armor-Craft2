@@ -674,3 +674,37 @@ export function snapToSurface(d0: Design, id: string): Design {
   };
   return setAttachment(updateTransform(d0, id, { position: [0, 0, 0] }), id, att);
 }
+
+// ---------------------------------------------------------------- repeated ornaments
+
+const ANGULAR_FAMILIES = new Set(['shell', 'dome', 'cap', 'horn', 'gauntlet', 'footwear', 'medallion']);
+
+/** Copy an accessory `count - 1` times, evenly spaced around its parent's surface (rivet rows, spike crowns...). */
+export function repeatAround(d0: Design, id: string, count: number): AddResult {
+  const inst = d0.instances[id];
+  const parent = inst?.parentId ? d0.instances[inst.parentId] : null;
+  const n = Math.round(count);
+  if (!inst || !parent || !inst.attachment || n < 2 || n > 48) return { design: d0, ids: [] };
+  const pt = TEMPLATE_BY_ID[parent.templateId];
+  if (inst.attachment.kind !== 'param' || !ANGULAR_FAMILIES.has(pt.family)) throw new Error('Repeat needs an accessory seated on a curved surface. Use "Snap to surface" first.');
+  const d = draft(d0);
+  const build = buildOf(d0, parent);
+  const ids: string[] = [];
+  const p = edit(d, parent.id);
+  for (let k = 1; k < n; k++) {
+    let u = inst.attachment.u + (k * Math.PI * 2) / n;
+    while (u > Math.PI) u -= Math.PI * 2;
+    const att: Attachment = { ...inst.attachment, u };
+    const r = resolveAttachment(att, build);
+    if (nearestVertex(build, r.position).dist > 0.03) continue; // fell off an open edge
+    att.position = r.position.toArray() as Vec3;
+    att.normal = r.normal.toArray() as Vec3;
+    const nid = copySubtree(d, d0.instances, id);
+    const c = d.instances[nid];
+    c.attachment = att;
+    c.symmetry.partnerId = null;
+    p.children.push(nid);
+    ids.push(nid);
+  }
+  return { design: d, ids };
+}

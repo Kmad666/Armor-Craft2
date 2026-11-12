@@ -282,8 +282,8 @@ export const shell: Family = {
           if (folds > 0) o += loose * folds * 0.006 * (1 - v) * Math.sin(8 * u + 5 * v);
           if (style === 'quilt') o += relief * 0.004 * Math.pow(Math.abs(Math.sin(v * Ls * 60)), 0.7);
           o += loose * (p.flare ?? 0) * 0.05 * (1 - v) * (1 - v);
-          let rx = y <= 0.035 ? sec.rx + o : 0;
-          let rz = y <= 0.035 ? sec.rz + o : 0;
+          let rx = y <= 0.056 ? sec.rx + o : 0;
+          let rz = y <= 0.056 ? sec.rz + o : 0;
           if (y > -0.075) {
             const rb = R + off;
             const ball = Math.sqrt(Math.max(0, rb * rb - y * y));
